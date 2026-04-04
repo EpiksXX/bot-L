@@ -13,7 +13,7 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 async def ask_gemma(user_text: str) -> str:
-    url = f"http://{PHONE_IP}:8081/v1/chat/completions"
+    url = f"http://{PHONE_IP}:8080/v1/chat/completions"
     payload = {
         "messages": [
             {
