@@ -1,15 +1,5 @@
-# Используем официальный легкий образ Python
-FROM python:3.11-slim
-
-# Рабочая директория внутри контейнера
-WORKDIR /app
-
-# Копируем файл с зависимостями и устанавливаем их
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Копируем код бота
-COPY bot.py .
-
-# Запускаем бота
-CMD ["python", "bot.py"]
+version: '3'
+services:
+  jarvis-bot:
+    build: .
+    restart: unless-stopped
