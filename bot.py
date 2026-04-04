@@ -5,7 +5,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 
 # === НАСТРОЙКИ ===
-BOT_TOKEN = "AAGKyy0fUB8bajEV7evGqpnjZfFciJMUG5Q"
+BOT_TOKEN = "8605918168:AAGKyy0fUB8bajEV7evGqpnjZfFciJMUG5Q"
 PHONE_IP = "192.168.1.88"  # Замени на IP твоего телефона
 # =================
 
