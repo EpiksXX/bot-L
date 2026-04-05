@@ -3,7 +3,12 @@ services:
   jarvis-bot:
     build: .
     restart: unless-stopped
-    # Вот этот блок передаст переменные из Portainer внутрь контейнера
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - PHONE_IP=${PHONE_IP}
+    volumes:
+      # Сохраняем папку /app/data из контейнера прямо на жесткий диск мини-ПК
+      - bot_memory:/app/data
+
+volumes:
+  bot_memory:
