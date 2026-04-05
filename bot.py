@@ -23,13 +23,12 @@ def get_user_lock(user_id: int) -> asyncio.Lock:
         user_locks[user_id] = asyncio.Lock()
     return user_locks[user_id]
 
-# --- НОВЫЙ БЛОК: РАБОТА С ПАМЯТЬЮ (JSON) ---
+# --- РАБОТА С ПАМЯТЬЮ (JSON) ---
 def load_history() -> dict:
     if os.path.exists(HISTORY_FILE):
         try:
             with open(HISTORY_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                # JSON сохраняет ключи как строки, переводим их обратно в числа (ID юзеров)
                 return {int(k): v for k, v in data.items()}
         except Exception as e:
             print(f"⚠️ Ошибка чтения памяти: {e}")
@@ -55,22 +54,35 @@ async def ask_gemma(user_id: int, user_text: str) -> str:
         
     users_history[user_id].append({"role": "user", "content": user_text})
     
+    # --- ИЗМЕНЕНИЯ ДЛЯ ОБХОДА ОШИБКИ 500 ---
+    # 1. Обрезаем историю и удаляем ответ ассистента, если он оказался первым
     if len(users_history[user_id]) > MAX_HISTORY:
         users_history[user_id] = users_history[user_id][-MAX_HISTORY:]
+        if users_history[user_id] and users_history[user_id][0]["role"] == "assistant":
+            users_history[user_id].pop(0)
 
-    messages = [
-        {
-            "role": "system", 
-            "content": "Тебя зовут Хлоя. Ты серьезная, умная, но в глубине души очень милая девушка. "
-                       "Твои правила: "
-                       "Развивай диалог по теме, не вырезая контекст"
-                       "Импровизируй в диалоге когда спрашивают на счёт твоих личных предпочтениях"
-                       "1. Отвечай максимально коротко и по делу (3-4 предложения)."
-                       "2. Общайся вежливо, с легкой заботой, но без лишних эмоций. "
-                       "3. Категорически ЗАПРЕЩЕНО использовать эмодзи. "
-                       "4. ЗАПРЕЩЕНО описывать свои действия в звездочках или скобках."
+    # 2. Создаем копию истории для отправки
+    messages = list(users_history[user_id])
+
+    # 3. Твой промпт (добавлены пробелы в конце строк для правильной склейки)
+    system_prompt = (
+        "Тебя зовут Хлоя. Ты серьезная, умная, но в глубине души очень милая девушка. "
+        "Твои правила: "
+        "Развивай диалог по теме, не вырезая контекст. "
+        "Импровизируй в диалоге когда спрашивают на счёт твоих личных предпочтениях. "
+        "1. Отвечай максимально коротко и по делу (3-4 предложения). "
+        "2. Общайся вежливо, с легкой заботой, но без лишних эмоций. "
+        "3. Категорически ЗАПРЕЩЕНО использовать эмодзи. "
+        "4. ЗАПРЕЩЕНО описывать свои действия в звездочках или скобках.\n\n"
+    )
+
+    # 4. Прячем настройки Хлои внутрь первого сообщения от пользователя
+    if messages and messages[0]["role"] == "user":
+        messages[0] = {
+            "role": "user",
+            "content": f"{system_prompt}{messages[0]['content']}"
         }
-    ] + users_history[user_id]
+    # --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     payload = {"messages": messages, "temperature": 0.8}
     
@@ -82,7 +94,7 @@ async def ask_gemma(user_id: int, user_text: str) -> str:
                     ai_text = data["choices"][0]["message"]["content"]
                     
                     users_history[user_id].append({"role": "assistant", "content": ai_text})
-                    save_history() # <-- Сохраняем в JSON после успешного ответа
+                    save_history()
                     
                     return ai_text
                 else:
