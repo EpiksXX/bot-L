@@ -1,23 +1,20 @@
 version: '3.8'
 services:
-  jarvis-bot:
+  bot:
     build: .
     restart: unless-stopped
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
-      # Заменили PHONE_IP на адрес Ollama в общей сети
-      - LLM_URL=http://ollama_server:11434/v1/chat/completions
+      # Адрес теперь указывает на контейнер llama_cpp_server
+      - LLM_URL=http://llama_cpp_server:8080/v1/chat/completions
     volumes:
-      # Сохраняем папку /app/data из контейнера прямо на жесткий диск мини-ПК
       - bot_memory:/app/data
-    # Подключаем бота к нашей созданной сети
     networks:
       - ai_network
 
 volumes:
   bot_memory:
 
-# Говорим Докеру, что эта сеть уже существует в Portainer
 networks:
   ai_network:
     external: true
