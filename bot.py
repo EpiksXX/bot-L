@@ -9,7 +9,7 @@ from aiogram.types import Message
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-PHONE_IP = os.getenv("PHONE_IP")
+# PHONE_IP удален, так как он больше не нужен
 MAX_HISTORY = 10
 HISTORY_FILE = "data/history.json" # Файл будет лежать в защищенной папке Docker
 
@@ -47,7 +47,8 @@ def save_history():
 users_history = load_history()
 
 async def ask_gemma(user_id: int, user_text: str) -> str:
-    url = f"http://{PHONE_IP}:8080/v1/chat/completions"
+    # URL теперь указывает на соседний контейнер с Ollama внутри сети Docker
+    url = os.getenv("LLM_URL", "http://ollama:11434/v1/chat/completions")
     
     if user_id not in users_history:
         users_history[user_id] = []
@@ -64,7 +65,7 @@ async def ask_gemma(user_id: int, user_text: str) -> str:
     # 2. Создаем копию истории для отправки
     messages = list(users_history[user_id])
 
-    # 3. Твой промпт (добавлены пробелы в конце строк для правильной склейки)
+    # 3. Твой промпт
     system_prompt = (
         "Тебя зовут Хлоя. Ты серьезная, умная, но в глубине души очень милая девушка. "
         "Твои правила: "
@@ -84,7 +85,12 @@ async def ask_gemma(user_id: int, user_text: str) -> str:
         }
     # --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-    payload = {"messages": messages, "temperature": 0.8}
+    # ВАЖНО: Добавлено поле "model", без него Ollama выдаст ошибку
+    payload = {
+        "model": "gemma:2b",
+        "messages": messages, 
+        "temperature": 0.8
+    }
     
     async with aiohttp.ClientSession() as session:
         try:
@@ -99,10 +105,11 @@ async def ask_gemma(user_id: int, user_text: str) -> str:
                     return ai_text
                 else:
                     users_history[user_id].pop()
-                    return f"❌ Ошибка от телефона: {response.status}"
+                    error_text = await response.text()
+                    return f"❌ Ошибка от сервера ИИ ({response.status}): {error_text}"
         except Exception as e:
             users_history[user_id].pop()
-            return f"❌ Не могу достучаться до телефона. Ошибка: {e}"
+            return f"❌ Не могу достучаться до сервера ИИ. Ошибка: {e}"
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
