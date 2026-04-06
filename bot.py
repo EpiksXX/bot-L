@@ -87,7 +87,7 @@ async def ask_gemma(user_id: int, user_text: str) -> str:
 
     # ВАЖНО: Добавлено поле "model", без него Ollama выдаст ошибку
     payload = {
-        "model": "gemma:2b",
+        "model": "qwen2.5:0.5b",
         "messages": messages, 
         "temperature": 0.8
     }
